@@ -54,6 +54,9 @@ Eastern Europe and the Baltics, built from real coastlines, rivers and terrain, 
 
 *The online server is on a free plan and goes to sleep when nobody is playing. If the game list is empty, give it about a minute to wake up. Solo play always works right away.*
 
+**Other ways to play**
+Trouble loading here, or want the game without the itch frame? Play it directly: https://pacta-relay.onrender.com
+
 ---
 
 ## Upload settings (checklist)

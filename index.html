@@ -39,7 +39,10 @@
   #authRow input { width: 130px; cursor: text; text-transform: uppercase; }
   #authRow .ok { color: var(--good); font-weight: 700; }
   #authRow .code { font: 700 15px Rajdhani, monospace; letter-spacing: .12em; color: var(--gold); user-select: text; }
-  #mpBox { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  #mpBox { margin: 10px 0 4px; padding: 10px 12px 12px; border: 1px solid var(--accent); border-radius: 3px; background: var(--btn-on); }
+  #mpBox button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; padding: 7px 14px; }
+  #games .new { display: block; margin-top: 8px; font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 3px; border: 1px solid var(--accent);
+    background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
   #games { top: 24px; right: 24px; width: 300px; max-height: calc(100vh - 48px); overflow: auto; display: none; }
   body.lobby #games { display: block; }
   #games h2 { margin: 0 0 2px; font-size: 18px; }
@@ -296,19 +299,21 @@
 </div>
 <div id="lobby" class="panel">
   <div class="brand">PACTA<i></i><span>Make pacts. Break them.</span></div>
-  <h2>Create game</h2>
-  <p>The host sets the rules — everyone in the match plays by them.</p>
-  <div class="set"><span>Your name</span><span><input id="nameIn" maxlength="16" placeholder="You"></span></div>
-  <div id="authRow"></div>
-  <div id="setList"></div>
-  <div class="set"><span>Map seed</span><span><input id="seedIn" class="num" inputmode="numeric"> <button id="reroll">New map</button></span></div>
-  <button id="startBtn">Create game</button>
   <div id="mpBox">
-    <div class="row2"><span class="dim">Online:</span><button id="mpCreate">Create room</button>
+    <h2 style="margin:0 0 2px">Play with friends</h2>
+    <p style="margin:0 0 8px">Create a room and send the link, or type a friend's 4-letter code. Open games are listed on the right.</p>
+    <div class="row2"><button id="mpCreate" class="primary">Create room</button><span class="dim" id="mpOr">or</span>
       <input id="codeIn" maxlength="4" placeholder="CODE"><button id="mpJoin">Join</button><button id="mpLeave" style="display:none">Leave room</button></div>
     <label class="dim" style="font-size:12px;display:block;margin-top:6px"><input type="checkbox" id="pubIn" checked style="width:auto;vertical-align:middle"> list my room publicly (anyone can join)</label>
     <div id="mpRoom"></div>
   </div>
+  <h2 style="margin-top:14px">Game settings</h2>
+  <p>Solo: press Play below. Online: the room host's settings apply to everyone.</p>
+  <div class="set"><span>Your name</span><span><input id="nameIn" maxlength="16" placeholder="You"></span></div>
+  <div id="authRow"></div>
+  <div id="setList"></div>
+  <div class="set"><span>Map seed</span><span><input id="seedIn" class="num" inputmode="numeric"> <button id="reroll">New map</button></span></div>
+  <button id="startBtn">Play solo vs bots</button>
   <details class="how"><summary>How to play</summary>
     <p>Click free land to spawn. Then click any neighbouring land to attack with the share of troops set on the slider —
     troops regrow fastest when you are not maxed out. Forts stop infantry, artillery breaks forts, raiders strike deep,
@@ -3257,14 +3262,18 @@ function renderRoom() {
   const box = $('mpRoom');
   document.body.classList.toggle('guest', !!net.code && !net.host);
   $('mpLeave').style.display = net.code ? '' : 'none';
-  $('mpCreate').style.display = $('mpJoin').style.display = $('codeIn').style.display = net.code ? 'none' : '';
-  $('startBtn').textContent = !net.code ? 'Create game' : net.host ? `Start online match (${net.players.length} player${net.players.length > 1 ? 's' : ''})` : 'Waiting for the host to start…';
+  $('mpCreate').style.display = $('mpJoin').style.display = $('codeIn').style.display = $('mpOr').style.display = net.code ? 'none' : '';
+  $('startBtn').textContent = !net.code ? 'Play solo vs bots' : net.host ? `Start online match (${net.players.length} player${net.players.length > 1 ? 's' : ''})` : 'Waiting for the host to start…';
   $('startBtn').disabled = !!net.code && !net.host;
   if (!net.code) { box.innerHTML = ''; return; }
-  const link = location.origin + location.pathname + '?room=' + net.code;
+  // invite link: the page on the game server itself (works even when this copy runs inside itch.io's frame)
+  const link = (CONFIG.net.server || new URLSearchParams(location.search).get('server') ? apiBase() + '/' : location.origin + location.pathname) + '?room=' + net.code;
   box.innerHTML = `Room <span class="code">${net.code}</span> · <a href="#" id="copyLink" style="color:var(--accent)">copy invite link</a>` +
     `<div>${net.players.map((p, i) => `<span class="pl ${i === net.index ? 'me' : ''}">${i === 0 ? '👑 ' : ''}${p}${net.verified?.[i] ? ' <span style="color:var(--good)">✓</span>' : ''}</span>`).join('')}</div>` +
-    (net.host ? '<div class="dim">You are the host — your settings apply to everyone.</div>' : '<div class="dim">The host picks the rules.</div>');
+    (net.host ? '<div class="dim">You are the host — set the rules below, then start.</div>' +
+      `<button id="mpStart" class="primary" style="margin-top:6px">Start online match (${net.players.length} player${net.players.length > 1 ? 's' : ''})</button>`
+      : '<div class="dim">Waiting for the host to start the match…</div>');
+  if ($('mpStart')) $('mpStart').onclick = () => netSend({ t: 'start' });
   $('copyLink').onclick = e => { e.preventDefault(); navigator.clipboard?.writeText(link).then(() => toast('Invite link copied'), () => toast(link)); };
 }
 $('mpCreate').onclick = () => netOpen({ t: 'create', name: playerName(), settings, seed, public: $('pubIn').checked });
@@ -3280,10 +3289,11 @@ async function refreshGames() {
       `<div class="g"><span><b>${g.host}</b>${g.hostVerified ? ' <span style="color:var(--good)">✓</span>' : ''} · ${MAP_NAME[g.map] || g.map}</span>` +
       `<button data-code="${g.code}">${g.started ? 'Watch / join' : 'Join'}</button>` +
       `<span class="dim">${g.started ? `<span class="live">● live ${g.minutes} min</span>` : 'waiting in lobby'} · ${g.players} human${g.players === 1 ? '' : 's'} · ${g.bots} bots${g.teams && g.teams !== 'ffa' ? ' · teams' : ''}</span></div>`).join('')
-      : 'No open games right now — create one, it will show up here for everyone.';
+      : 'No open games right now. Start one and it shows up here for everyone:<button class="new" data-new="1">Create room</button>';
   } catch { $('gameList').textContent = 'Game server offline (open the game from the server to see online games).'; }
 }
 $('gameList').addEventListener('click', e => {
+  if (e.target.closest('button[data-new]')) return $('mpCreate').click();
   const b = e.target.closest('button[data-code]'); if (!b) return;
   if (net.code) netLeave();
   netOpen({ t: 'join', code: b.dataset.code, name: playerName() });
