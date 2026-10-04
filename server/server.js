@@ -60,7 +60,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(list));
   } else if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+    res.end(JSON.stringify({ ok: true, rooms: rooms.size, names: players.storeKind() }));   // names: 'supabase' (persistent) or 'file'
   } else { res.writeHead(404); res.end('not found'); }
 });
 
